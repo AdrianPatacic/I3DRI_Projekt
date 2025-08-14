@@ -1,15 +1,34 @@
 using System;
+using Assets.Scripts;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class HudController : MonoBehaviour
 {
     [SerializeField] private PlayerController player;
     [SerializeField] private Camera mainCamera;
     [SerializeField] private RectTransform crosshairRect;
+    [SerializeField] private Slider staminaBar;
+    [SerializeField] private Slider healthBar;
 
-    [SerializeField] float minScale = 0.5f;
-    [SerializeField] float maxScale = 1.5f;
+    [SerializeField] float minScale = 0.2f;
+    [SerializeField] float maxScale = 1f;
     [SerializeField] float maxDistance = 10f;
+
+    private void Start()
+    {
+        if (staminaBar == null)
+            staminaBar = transform.Find("StaminaBar").GetComponent<Slider>();
+
+        if (healthBar == null)
+            healthBar = transform.Find("HealthBar").GetComponent<Slider>();
+
+        if (staminaBar != null)
+            staminaBar.maxValue = player.GetMaxStamina();
+
+        if (healthBar != null)
+            healthBar.maxValue = player.GetMaxHealth();
+    }
 
     void Update()
     {
@@ -19,6 +38,7 @@ public class HudController : MonoBehaviour
                 crosshairRect.gameObject.SetActive(true);
 
             Vector3 targetPos = player.lockedOnGameObjectPublic.transform.position;
+            targetPos.y += 1f;
             Vector3 screenPos = mainCamera.WorldToScreenPoint(targetPos);
             crosshairRect.position = screenPos;
 
@@ -34,5 +54,9 @@ public class HudController : MonoBehaviour
             if (crosshairRect.gameObject.activeSelf)
                 crosshairRect.gameObject.SetActive(false);
         }
+
+        staminaBar.value = player.GetStamina();
+        healthBar.value = player.GetHealth();
+
     }
 }

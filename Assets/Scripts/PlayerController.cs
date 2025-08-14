@@ -1,260 +1,368 @@
 using System;
+using System.Collections;
+using Assets.Models;
 using UnityEngine;
 using UnityEngine.InputSystem.XR;
 using UnityEngine.UI;
 
-public class PlayerController : MonoBehaviour
+namespace Assets.Scripts
 {
-
-    [SerializeField] private CharacterController characterController;
-    [SerializeField] private Animator animator;
-    [SerializeField] private Slider staminaBar;
-    [SerializeField] private Camera mainCamera;
-
-    private float currentSpeed;
-    [SerializeField] private float crouchSpeed = 2f;
-    [SerializeField] private float walkSpeed = 5f;
-    [SerializeField] private float sprintSpeed = 10f;
-
-    [SerializeField] private float gravity = -9.81f;
-    [SerializeField] private float jumpHeight = 1.5f;
-
-    [SerializeField] private float maxStamina = 100f;
-    [SerializeField] private float staminaDrainRate = 25f;
-    [SerializeField] private float staminaRegenRate = 15f;
-    [SerializeField] private float currentStamina;
-
-    [SerializeField] private bool isCrouching = false;
-    [SerializeField] private bool isMoving;
-    [SerializeField] private bool isSprinting;
-    [SerializeField] private Vector3 velocity;
-    [SerializeField] private bool isGrounded;
-
-    [SerializeField] private bool lockedOn;
-    public bool lockedOnPublic => lockedOn;
-
-    [SerializeField] private GameObject lockedOnGameObject;
-    public GameObject lockedOnGameObjectPublic => lockedOnGameObject;
-
-    private enum StateEnum { idle, walking, sprinting, emote, crouching, crouchWalk }
-    private StateEnum state = StateEnum.idle;
-    private Vector3 lastPosition;
-
-
-
-    void Start()
+    public class PlayerController : Entity
     {
-        characterController = GetComponent<CharacterController>();
-        currentStamina = maxStamina;
         
-        if (staminaBar != null)
-            staminaBar.maxValue = maxStamina;
-        lastPosition = transform.position;
-    }
 
-    
-    void Update()
-    { 
+        [SerializeField] private CharacterController characterController;
+        [SerializeField] private Animator animator;
+        [SerializeField] private Camera mainCamera;
+        [SerializeField] private WeaponController weaponController;
 
-        #region Grounding
-        // isGrounded Check - has to be before characterControler.Move() because .move affects .isGrounded
-        isGrounded = characterController.isGrounded;
+        private float currentSpeed;
+        [SerializeField] private float crouchSpeed = 2f;
+        [SerializeField] private float attackMoveSpeed = 2f;
+        [SerializeField] private float walkSpeed = 5f;
+        [SerializeField] private float sprintSpeed = 10f;
 
-        // stick the player to the ground and cap the -y
-        if(isGrounded && characterController.velocity.y < 0)
+        [SerializeField] private float gravity = -9.81f;
+        [SerializeField] private float jumpHeight = 1.5f;
+
+        [SerializeField] private float maxStamina = 100f;
+        [SerializeField] private float staminaDrainRate = 25f;
+        [SerializeField] private float staminaRegenRate = 15f;
+        [SerializeField] private float currentStamina;
+
+
+        [SerializeField] private bool canMove = true;
+        [SerializeField] private bool isCrouching = false;
+        [SerializeField] private bool isRolling = false;
+        [SerializeField] private bool isAttacking = false;
+        [SerializeField] private bool isMoving;
+        [SerializeField] private bool isSprinting;
+        [SerializeField] private bool isJumping;
+        [SerializeField] private bool isFalling;
+        [SerializeField] private Vector3 velocity;
+        [SerializeField] private bool isGrounded;
+
+        [SerializeField] private bool lockedOn;
+        public bool lockedOnPublic => lockedOn;
+
+        [SerializeField] private GameObject lockedOnGameObject;
+        public GameObject lockedOnGameObjectPublic => lockedOnGameObject;
+
+
+        private enum StateEnum { idle, walking, sprinting, roll, crouching, crouchWalk, jumping, falling, attacking }
+        private StateEnum state = StateEnum.idle;
+        private Vector3 lastPosition;
+
+        Coroutine staminaRecoveryCoroutine;
+
+        void Start()
         {
-            velocity.y = -2f;
+            characterController = GetComponent<CharacterController>();
+            currentStamina = maxStamina;
+            currentHealth = maxHealth;
+
+            lastPosition = transform.position;
         }
-        #endregion
 
-        bool lockOnKey = Input.GetKeyDown(KeyCode.E);
 
-        if(lockOnKey && lockedOn)
+        void Update()
         {
-            lockedOn = false;
-        }else if(lockOnKey && !lockedOn)
-        {
-            lockedOn = true;
-        }
 
-            #region First Person Movement
+            #region Grounding
+            // isGrounded Check - has to be before characterControler.Move() because .move affects .isGrounded
+            isGrounded = characterController.isGrounded;
 
-            /*
+            // stick the player to the ground and cap the -y
+            if (isGrounded && characterController.velocity.y < 0)
+            {
+                velocity.y = -2f;
+            }
+            #endregion
+
+            #region LockOn
+            bool lockOnKey = Input.GetKeyDown(KeyCode.E);
+
+            if (lockedOnGameObject == null)
+                lockedOn = false;
+
+            if (lockOnKey && lockedOn)
+            {
+                lockedOn = false;
+            }
+            else if (lockOnKey && !lockedOn && lockedOnGameObject != null)
+            {
+                lockedOn = true;
+            }
+            #endregion
+
+            #region Movement
+
+            //Get movement Inputs
             float x = Input.GetAxis("Horizontal");
             float z = Input.GetAxis("Vertical");
 
-            Vector3 move = transform.right * x + transform.forward * z;
-            characterController.Move(move * currentSpeed * Time.deltaTime);
+            //Get Camera forward and right
+            Vector3 camForward = mainCamera.transform.forward;
+            Vector3 camRight = mainCamera.transform.right;
+            camForward.y = 0f;
+            camRight.y = 0f;
+            camForward.Normalize();
+            camRight.Normalize();
 
+            // Move player in direction of move input
+
+            if (canMove)
+            {
+                Vector3 move = camForward * z + camRight * x;
+                characterController.Move(move.normalized * currentSpeed * Time.deltaTime);
+            }
+
+            // Rotate player based on move input and camera rotation or based on lockedOnGameObject
+            Vector3 moveDir = new Vector3(x, 0f, z);
+            if (lockedOn)
+            {
+                Vector3 direction = lockedOnGameObject.transform.position - transform.position;
+                direction.y = 0f;
+                if (direction != Vector3.zero)
+                {
+                    Quaternion rot = Quaternion.LookRotation(direction);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, rot, Time.deltaTime * 10f);
+                }
+            }
+            else if (moveDir != Vector3.zero)
+            {
+                Vector3 worldDir = mainCamera.transform.TransformDirection(moveDir);
+                worldDir.y = 0f;
+                Quaternion rot = Quaternion.LookRotation(worldDir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, rot, Time.deltaTime * 10f);
+            }
+
+            // isMoving Check
             Vector3 velocityCheck;
             velocityCheck = (transform.position - lastPosition) / Time.deltaTime;
             lastPosition = transform.position;
-
             isMoving = velocityCheck.magnitude > 0f;
 
+            // isCrouching Check
             bool crouchKey = Input.GetKeyDown(KeyCode.LeftControl);
-
             if (crouchKey && !isCrouching)
             {
                 isCrouching = true;
-            }else if (crouchKey && isCrouching)
+            }
+            else if (crouchKey && isCrouching)
             {
                 isCrouching = false;
             }
-            */
+
+            // isSprinting Check
+            bool sprintKey = Input.GetKey(KeyCode.LeftShift);
+            isSprinting = sprintKey && currentStamina > 0f && isMoving;
+
+            // currentSpeed selection
+            if (state == StateEnum.attacking)
+            {
+                currentSpeed = attackMoveSpeed;
+            }
+            else if (state == StateEnum.walking)
+            {
+                currentSpeed = walkSpeed;
+            }
+            else if (state == StateEnum.sprinting)
+            {
+                currentSpeed = sprintSpeed;
+            }
+            else if (state == StateEnum.crouching || state == StateEnum.crouchWalk)
+            {
+                currentSpeed = crouchSpeed;
+            }
 
             #endregion
 
-            #region Third Person Movement
-
-        //Get movement Inputs
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
-
-        //Get Camera forward and right
-        Vector3 camForward = mainCamera.transform.forward;
-        Vector3 camRight = mainCamera.transform.right;
-        camForward.y = 0f;
-        camRight.y = 0f;
-        camForward.Normalize();
-        camRight.Normalize();
-
-        // Move player in direction of move input
-        Vector3 move = camForward * z + camRight * x;
-        characterController.Move(move.normalized * currentSpeed * Time.deltaTime);
-
-        // Rotate player based on move input and camera rotation or based on lockedOnGameObject
-        Vector3 moveDir = new Vector3(x, 0f, z);
-        if (lockedOn)
-        {
-            Vector3 direction = (lockedOnGameObject.transform.position - transform.position);
-            direction.y = 0f;
-            if (direction != Vector3.zero)
+            #region Stamina
+            if (isSprinting)
             {
-                Quaternion rot = Quaternion.LookRotation(direction);
-                transform.rotation = Quaternion.Slerp(transform.rotation, rot, Time.deltaTime * 10f);
+                DrainStamina();
+
             }
-        }
-        else if(moveDir != Vector3.zero)
-        {
-            Vector3 worldDir = mainCamera.transform.TransformDirection(moveDir);
-            worldDir.y = 0f;
-            Quaternion rot = Quaternion.LookRotation(worldDir);
-            transform.rotation = Quaternion.Slerp(transform.rotation, rot, Time.deltaTime * 10f);
+            else if (currentStamina != maxStamina && staminaRecoveryCoroutine == null)
+            {
+                staminaRecoveryCoroutine = StartCoroutine(RecoverStamina());
+            }
+
+            #endregion
+
+            #region Jump & Gravity
+            // get jumpVelocity if jump is pressed
+            if (Input.GetButtonDown("Jump") && isGrounded)
+            {
+                velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            }
+
+            // get gravity velocity if in the air
+            if (!isGrounded)
+                velocity.y += gravity * Time.deltaTime;
+
+            //apply either the jump or gravity velocity
+            characterController.Move(velocity * Time.deltaTime);
+            #endregion
+
+            #region Attack
+            if (Input.GetKeyDown(KeyCode.K) && !isAttacking && currentStamina > 0)
+            {
+                isAttacking = true;
+            }
+
+            #endregion
+
+            #region Roll
+
+            if (Input.GetKeyDown(KeyCode.X) && !isRolling && isGrounded)
+            {
+                isRolling = true;
+            }
+
+            #endregion
+
+            #region State
+
+            isJumping = !isGrounded && characterController.velocity.y >= 0;
+
+            isFalling = !isGrounded && characterController.velocity.y < 0;
+
+            if (isRolling)
+            {
+                state = StateEnum.roll;
+            }
+            else if (isAttacking)
+            {
+                state = StateEnum.attacking;
+            }
+            else if (isJumping)
+            {
+                state = StateEnum.jumping;
+            }
+            else if (isFalling)
+            {
+                state = StateEnum.falling;
+            }
+            else if (isSprinting)
+            {
+                state = StateEnum.sprinting;
+            }
+            else if (isCrouching && isMoving)
+            {
+                state = StateEnum.crouchWalk;
+            }
+            else if (isMoving)
+            {
+                state = StateEnum.walking;
+            }
+            else if (isCrouching)
+            {
+                state = StateEnum.crouching;
+            }
+            else
+                state = StateEnum.idle;
+
+            animator.SetInteger("State", (int)state);
+            #endregion
         }
 
-
-        // isMoving Check
-        Vector3 velocityCheck;
-        velocityCheck = (transform.position - lastPosition) / Time.deltaTime;
-        lastPosition = transform.position;
-        isMoving = velocityCheck.magnitude > 0f;
-
-        // isCrouching Check
-        bool crouchKey = Input.GetKeyDown(KeyCode.LeftControl);
-        if (crouchKey && !isCrouching)
+        private IEnumerator RecoverStamina()
         {
-            isCrouching = true;
-        }
-        else if (crouchKey && isCrouching)
-        {
-            isCrouching = false;
+            yield return new WaitForSeconds(1f);
+
+            while (currentStamina < maxStamina)
+            {
+                currentStamina += staminaRegenRate * Time.deltaTime;
+                if (currentStamina > maxStamina)
+                    currentStamina = maxStamina;
+
+                yield return null; // wait 1 frame
+            }
+
+            staminaRecoveryCoroutine = null;
         }
 
-        // isSprinting Check
-        bool sprintKey = Input.GetKey(KeyCode.LeftShift);
-        isSprinting = sprintKey && currentStamina > 0f && isMoving;
+        private void DrainStamina()
+        {
+            if (staminaRecoveryCoroutine != null)
+            {
+                StopCoroutine(staminaRecoveryCoroutine);
+                staminaRecoveryCoroutine = null;
+            }
 
-        // currentSpeed selection
-        if (state == StateEnum.walking)
-        {
-            currentSpeed = walkSpeed;
-        }
-        else if (state == StateEnum.sprinting)
-        {
-            currentSpeed = sprintSpeed;
-        }
-        else if (state == StateEnum.crouching || state == StateEnum.crouchWalk)
-        {
-            currentSpeed = crouchSpeed;
-        }
-
-        #endregion
-
-        #region Stamina
-        if (isSprinting)
-        {
-            // Drain stamina if sprinting
             currentStamina -= staminaDrainRate * Time.deltaTime;
             if (currentStamina <= 0f)
             {
-                // lower cap on stamina
                 currentStamina = 0f;
                 isSprinting = false;
             }
         }
-        else
+
+        private void DrainStamina(float amount)
         {
-            // regen stamina if not sprinting
-            currentStamina += staminaRegenRate * Time.deltaTime;
-            // top cap on stamina
-            if (currentStamina > maxStamina)
-                currentStamina = maxStamina;
+            if (staminaRecoveryCoroutine != null)
+            {
+                StopCoroutine(staminaRecoveryCoroutine);
+                staminaRecoveryCoroutine = null;
+            }
+
+            currentStamina -= amount;
+            if (currentStamina <= 0f)
+            {
+                currentStamina = 0f;
+            }
         }
 
-        if (staminaBar != null)
-            staminaBar.value = currentStamina;
-        #endregion
 
-        #region Jump & Gravity
-        // get jumpVelocity if jump is pressed
-        if (Input.GetButtonDown("Jump") && isGrounded)
+        public void OnAttackStart()
         {
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            weaponController.EnableCollider();
+            DrainStamina(25);
         }
 
-        // get gravity velocity if in the air
-        if (!isGrounded)
-            velocity.y += gravity * Time.deltaTime;
-
-        //apply either the jump or gravity velocity
-        characterController.Move(velocity * Time.deltaTime);
-        #endregion
-
-        #region State
-
-        // state machine for animations
-        if (isSprinting)
+        public void OnAttackEnd()
         {
-            state = StateEnum.sprinting;
+            isAttacking = false;
+            weaponController.DisableCollider();
         }
-        else if (isCrouching && isMoving)
+
+        public void OnRollStart()
         {
-            state = StateEnum.crouchWalk;
-        }else if (isMoving)
-        {
-            state = StateEnum.walking;
-        }else if (isCrouching)
-        {
-            state = StateEnum.crouching;
+            canMove = false;
+            animator.applyRootMotion = true;
+            DrainStamina(25);
         }
-        else if (Input.GetKeyDown(KeyCode.F))
+
+        public void OnRollEnd()
         {
-            state = StateEnum.emote;
+            canMove = true;
+            animator.applyRootMotion = false;
+            isRolling = false;
         }
-        else
-            state = StateEnum.idle;
 
+        public void EnableInvulnerability()
+        {
+            invulnreable = true;
+        }
 
+        public void DisableInvulnerability()
+        {
+            invulnreable = false;
+        }
 
+        protected override void Die()
+        {
+            Debug.Log("URRR DEEEADDDDD");
+        }
 
+        public float GetMaxStamina() => maxStamina;
+        public float GetMaxHealth() => maxHealth;
 
+        public float GetStamina() => currentStamina;
 
+        public float GetHealth() => currentHealth;
 
-
-
-
-        animator.SetInteger("State", (int)state);
-        #endregion
     }
 }
