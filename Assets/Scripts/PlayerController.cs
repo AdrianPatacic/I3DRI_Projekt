@@ -24,6 +24,8 @@ namespace Assets.Scripts
 
         [SerializeField] private float gravity = -9.81f;
         [SerializeField] private float jumpHeight = 1.5f;
+        [SerializeField] private float coyoteTime = 0.01f;
+        private float lastTimeGrounded;
 
         [SerializeField] private float maxStamina = 100f;
         [SerializeField] private float staminaDrainRate = 25f;
@@ -69,14 +71,15 @@ namespace Assets.Scripts
         {
 
             #region Grounding
-            // isGrounded Check - has to be before characterControler.Move() because .move affects .isGrounded
-            isGrounded = characterController.isGrounded;
-
-            // stick the player to the ground and cap the -y
-            if (isGrounded && characterController.velocity.y < 0)
+            
+            if(characterController.isGrounded && characterController.velocity.y <= 0)
             {
-                velocity.y = -2f;
+                lastTimeGrounded = Time.time;
+                velocity.y = -2;
             }
+
+            isGrounded = Time.time - lastTimeGrounded <= coyoteTime;
+
             #endregion
 
             #region LockOn
@@ -141,7 +144,7 @@ namespace Assets.Scripts
             Vector3 velocityCheck;
             velocityCheck = (transform.position - lastPosition) / Time.deltaTime;
             lastPosition = transform.position;
-            isMoving = velocityCheck.magnitude > 0f;
+            isMoving = velocityCheck.magnitude > 0.1f;
 
             // isCrouching Check
             bool crouchKey = Input.GetKeyDown(KeyCode.LeftControl);
@@ -225,9 +228,9 @@ namespace Assets.Scripts
 
             #region State
 
-            isJumping = !isGrounded && characterController.velocity.y >= 0;
+            isJumping = !isGrounded && characterController.velocity.y >= 0f;
 
-            isFalling = !isGrounded && characterController.velocity.y < 0;
+            isFalling = !isGrounded && characterController.velocity.y < 0f;
 
             if (isRolling)
             {
