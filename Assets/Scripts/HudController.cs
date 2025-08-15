@@ -10,6 +10,8 @@ public class HudController : MonoBehaviour
     [SerializeField] private RectTransform crosshairRect;
     [SerializeField] private Slider staminaBar;
     [SerializeField] private Slider healthBar;
+    [SerializeField] private GameObject pauseMenuPanel;
+    [SerializeField] private GameObject deathPanel;
 
     [SerializeField] float minScale = 0.2f;
     [SerializeField] float maxScale = 1f;
@@ -58,5 +60,37 @@ public class HudController : MonoBehaviour
         staminaBar.value = player.GetStamina();
         healthBar.value = player.GetHealth();
 
+        if (Input.GetKeyDown(KeyCode.Escape) && pauseMenuPanel.activeSelf)
+        {
+            Resume();
+        }else if(Input.GetKeyDown(KeyCode.Escape) && !pauseMenuPanel.activeSelf)
+        {
+            Pause();
+        }
+
+    }
+
+    public void Resume()
+    {
+        pauseMenuPanel.SetActive(false);
+        Time.timeScale = 1f;
+        Cursor.lockState = CursorLockMode.Locked;
+    }
+
+    public void Pause()
+    {
+        pauseMenuPanel.SetActive(true);
+        Time.timeScale = 0f;
+        Cursor.lockState = CursorLockMode.Confined;
+    }
+
+    public void ExitGame()
+    {
+        Application.Quit();
+    }
+
+    public void EnableDeathScreen()
+    {
+        deathPanel.SetActive(true);
     }
 }

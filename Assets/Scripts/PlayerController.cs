@@ -15,6 +15,7 @@ namespace Assets.Scripts
         [SerializeField] private Animator animator;
         [SerializeField] private Camera mainCamera;
         [SerializeField] private WeaponController weaponController;
+        [SerializeField] private HudController hudController;
 
         private float currentSpeed;
         [SerializeField] private float crouchSpeed = 2f;
@@ -357,7 +358,8 @@ namespace Assets.Scripts
 
         protected override void Die()
         {
-            Debug.Log("URRR DEEEADDDDD");
+            Time.timeScale = 0f;
+            hudController.EnableDeathScreen();
         }
 
         public float GetMaxStamina() => maxStamina;
