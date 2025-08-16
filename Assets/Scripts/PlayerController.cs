@@ -17,6 +17,8 @@ namespace Assets.Scripts
         [SerializeField] private WeaponController weaponController;
         [SerializeField] private HudController hudController;
 
+        [SerializeField] public bool dead = false;
+
         private float currentSpeed;
         [SerializeField] private float crouchSpeed = 2f;
         [SerializeField] private float attackMoveSpeed = 2f;
@@ -360,6 +362,7 @@ namespace Assets.Scripts
         {
             Time.timeScale = 0f;
             hudController.EnableDeathScreen();
+            dead = true;
         }
 
         public float GetMaxStamina() => maxStamina;

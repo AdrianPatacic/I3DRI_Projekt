@@ -72,15 +72,19 @@ public class HudController : MonoBehaviour
 
     public void Resume()
     {
+        
+        if (!player.dead)
+        {
+            Time.timeScale = 1f;
+        }
         pauseMenuPanel.SetActive(false);
-        Time.timeScale = 1f;
         Cursor.lockState = CursorLockMode.Locked;
     }
 
     public void Pause()
     {
-        pauseMenuPanel.SetActive(true);
         Time.timeScale = 0f;
+        pauseMenuPanel.SetActive(true);
         Cursor.lockState = CursorLockMode.Confined;
     }
 

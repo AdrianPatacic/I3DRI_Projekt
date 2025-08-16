@@ -84,7 +84,6 @@ public class EnemyController : Entity
 
         }
 
-        animator.SetFloat("speed", velocity);
         animator.SetInteger("state", (int)state);
 
     }
@@ -192,6 +191,14 @@ public class EnemyController : Entity
     }
 
     protected override void Die()
+    {
+        if (agent != null) agent.isStopped = true;
+        animator.SetTrigger("Death");
+        canMove = false;
+        this.enabled = false;
+    }
+
+    public void DestroyObject()
     {
         Destroy(gameObject);
     }
