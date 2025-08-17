@@ -16,6 +16,8 @@ namespace Assets.Scripts
         [SerializeField] private Camera mainCamera;
         [SerializeField] private WeaponController weaponController;
         [SerializeField] private HudController hudController;
+        [SerializeField] private AudioClip[] attackAudioClips;
+        [SerializeField] private AudioClip[] hitAudioClips;
 
         [SerializeField] public bool dead = false;
 
@@ -321,7 +323,17 @@ namespace Assets.Scripts
             }
         }
 
+        public void PlayRandomAttackSound()
+        {
+            int i = UnityEngine.Random.Range(0, attackAudioClips.Length);
+            AudioSource.PlayClipAtPoint(attackAudioClips[i], transform.position);
+        }
 
+        public void PlayRandomHitSound()
+        {
+            int i = UnityEngine.Random.Range(0, hitAudioClips.Length);
+            AudioSource.PlayClipAtPoint(hitAudioClips[i], transform.position);
+        }
         public void OnAttackStart()
         {
             weaponController.EnableCollider();
@@ -372,5 +384,11 @@ namespace Assets.Scripts
 
         public float GetHealth() => currentHealth;
 
+
+        public override void TakeDamage(int damage)
+        {
+            base.TakeDamage(damage);
+            PlayRandomHitSound();
+        }
     }
 }

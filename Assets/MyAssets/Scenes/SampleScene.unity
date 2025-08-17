@@ -2004,7 +2004,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dded8c0c195d9e6419f3025a83cea39b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hitEffectPrefab: {fileID: 0}
+  hitEffectPrefab: {fileID: 7204288068236550335, guid: 10b11514e591d624bb85c1dce1b79aa8, type: 3}
   currDamage: 25
   targetTag: Player
 --- !u!54 &878918502
@@ -2614,7 +2614,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dded8c0c195d9e6419f3025a83cea39b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hitEffectPrefab: {fileID: 0}
+  hitEffectPrefab: {fileID: 7204288068236550335, guid: 10b11514e591d624bb85c1dce1b79aa8, type: 3}
   currDamage: 25
   targetTag: Player
 --- !u!4 &1352605277 stripped
@@ -2693,6 +2693,18 @@ MonoBehaviour:
   mainCamera: {fileID: 1440211321}
   weaponController: {fileID: 866044502}
   hudController: {fileID: 697602195}
+  attackAudioClips:
+  - {fileID: 8300000, guid: b0eddbe92b9c249b6a3e6913ea2dc163, type: 3}
+  - {fileID: 8300000, guid: 144ee9438b9364f969c0fc7064615c19, type: 3}
+  - {fileID: 8300000, guid: 2a1cfd41c98d1460d816233f23e6152f, type: 3}
+  - {fileID: 8300000, guid: 17eaccd8f692843cf9652d4cec294fe2, type: 3}
+  - {fileID: 8300000, guid: 962fed30cb2044e488376207e9cd60f3, type: 3}
+  - {fileID: 8300000, guid: 940905f8a21c145119b64f16e7131c47, type: 3}
+  hitAudioClips:
+  - {fileID: 8300000, guid: 533eb084e91004ad5aadaa657cd7151f, type: 3}
+  - {fileID: 8300000, guid: 21c4ab875aa9e473ea4e991528cccc1f, type: 3}
+  - {fileID: 8300000, guid: 8eb1d125e75d149949e6344d13c8cee6, type: 3}
+  - {fileID: 8300000, guid: ad9c3be3218b04bd1ba0350849bf5407, type: 3}
   dead: 0
   crouchSpeed: 2
   attackMoveSpeed: 2
