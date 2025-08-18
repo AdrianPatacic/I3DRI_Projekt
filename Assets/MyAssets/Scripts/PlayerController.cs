@@ -18,6 +18,7 @@ namespace Assets.Scripts
         [SerializeField] private HudController hudController;
         [SerializeField] private AudioClip[] attackAudioClips;
         [SerializeField] private AudioClip[] hitAudioClips;
+        [SerializeField] private AudioClip[] jumpAudioClips;
 
         [SerializeField] public bool dead = false;
 
@@ -333,6 +334,12 @@ namespace Assets.Scripts
         {
             int i = UnityEngine.Random.Range(0, hitAudioClips.Length);
             AudioSource.PlayClipAtPoint(hitAudioClips[i], transform.position);
+        }
+
+        public void PlayRandomJumpSound()
+        {
+            int i = UnityEngine.Random.Range(0, jumpAudioClips.Length);
+            AudioSource.PlayClipAtPoint(jumpAudioClips[i], transform.position);
         }
         public void OnAttackStart()
         {
