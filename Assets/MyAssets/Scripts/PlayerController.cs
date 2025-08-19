@@ -216,7 +216,7 @@ namespace Assets.Scripts
             #endregion
 
             #region Attack
-            if (Input.GetKeyDown(KeyCode.K) && !isAttacking && currentStamina > 0)
+            if (Input.GetKeyDown(KeyCode.Mouse0) && !isAttacking && currentStamina > 0)
             {
                 isAttacking = true;
             }
