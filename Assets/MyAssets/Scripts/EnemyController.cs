@@ -54,7 +54,11 @@ public class EnemyController : Entity
                 agent.speed = 3.5f;
             }
         }
-        else { agent.speed = 0f; }
+        else 
+        { 
+            agent.speed = 0f;
+            velocity = 0f;
+        }
 
 
         velocity = agent.velocity.magnitude;
